@@ -74,7 +74,7 @@ const Watch = () => {
     <div className="min-h-screen bg-base">
       <Navbar />
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-[1400px] mx-auto px-4 py-8">
         <Link to="/" className="text-sm text-muted hover:text-white transition mb-6 inline-block">
           ← Back to all live streams
         </Link>
