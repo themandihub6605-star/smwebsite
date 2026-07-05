@@ -1,69 +1,51 @@
 import React, { useEffect, useRef } from "react";
 
-// Same embedded approach as the influencer's host view, but joins with
-// role 0 (attendee/viewer). Renders fully inside our own page.
+// Same Client View approach as the host side, joined as attendee (role 0).
+// Renders the full native Zoom UI, staying on OUR domain the whole time.
 const ZoomViewerEmbed = ({ meetingConfig, displayName }) => {
-  const containerRef = useRef(null);
-  const clientRef = useRef(null);
+  const startedRef = useRef(false);
 
   useEffect(() => {
-    let isMounted = true;
+    if (startedRef.current) return;
+    startedRef.current = true;
 
     const joinMeeting = async () => {
-      const { default: ZoomMtgEmbedded } = await import("@zoom/meetingsdk/embedded");
+      const { ZoomMtg } = await import("@zoom/meetingsdk");
 
       await import("@zoom/meetingsdk/dist/css/bootstrap.css");
       await import("@zoom/meetingsdk/dist/css/react-select.css");
 
-      const client = ZoomMtgEmbedded.createClient();
-      clientRef.current = client;
+      ZoomMtg.setZoomJSLib("https://source.zoom.us/3.9.0/lib", "/av");
+      ZoomMtg.preLoadWasm();
+      ZoomMtg.prepareWebSDK();
+      ZoomMtg.i18n.load("en-US");
+      ZoomMtg.i18n.reload("en-US");
 
-      if (!isMounted || !containerRef.current) return;
+      const zmmtgRoot = document.getElementById("zmmtg-root");
+      if (zmmtgRoot) zmmtgRoot.style.display = "block";
 
-      await client.init({
-        zoomAppRoot: containerRef.current,
-        language: "en-US",
+      ZoomMtg.init({
+        leaveUrl: window.location.href,
         patchJsMedia: true,
-        customize: {
-          video: {
-            isResizable: true,
-            popper: { disableDraggable: true },
-          },
+        success: () => {
+          ZoomMtg.join({
+            sdkKey: meetingConfig.sdkKey,
+            signature: meetingConfig.signature,
+            meetingNumber: meetingConfig.meetingNumber,
+            passWord: meetingConfig.password,
+            userName: displayName || "Viewer",
+            success: () => console.log("Joined as viewer successfully"),
+            error: (err) => console.error("Zoom join error:", err),
+          });
         },
-      });
-
-      await client.join({
-        sdkKey: meetingConfig.sdkKey,
-        signature: meetingConfig.signature,
-        meetingNumber: meetingConfig.meetingNumber,
-        password: meetingConfig.password,
-        userName: displayName || "Viewer",
+        error: (err) => console.error("Zoom init error:", err),
       });
     };
 
-    joinMeeting().catch((err) => {
-      console.error("Failed to join live stream:", err);
-    });
+    joinMeeting();
+  }, [meetingConfig, displayName]);
 
-    return () => {
-      isMounted = false;
-      if (clientRef.current) {
-        clientRef.current.leaveMeeting().catch(() => {});
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meetingConfig]);
-
-  return (
-    <div className="w-full rounded-2xl overflow-visible bg-black" style={{ minHeight: 700 }}>
-      <div
-        ref={containerRef}
-        id="zmmtg-root-container"
-        className="w-full"
-        style={{ position: "relative", width: "100%", minHeight: 700 }}
-      />
-    </div>
-  );
+  return null;
 };
 
 export default ZoomViewerEmbed;

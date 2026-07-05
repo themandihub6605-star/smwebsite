@@ -1,23 +1,23 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import ZoomViewerEmbed from "../components/ZoomViewerEmbed";
 import api from "../api/axios";
 
 const Watch = () => {
   const { influencerId } = useParams();
+  const [meetingConfig, setMeetingConfig] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [joined, setJoined] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [nameSubmitted, setNameSubmitted] = useState(false);
 
-  const fetchAndJoin = async () => {
+  const fetchJoinDetails = async () => {
     setLoading(true);
     setError("");
     try {
       const res = await api.get(`/live/join/${influencerId}`);
-      // Opens the REAL Zoom app/website in a new tab as a viewer -
-      // full native Zoom experience, not embedded on our site.
-      window.open(res.data.data.joinUrl, "_blank");
-      setJoined(true);
+      setMeetingConfig(res.data.data);
     } catch (err) {
       setError(err.response?.data?.message || "This stream is not live right now.");
     } finally {
@@ -26,14 +26,56 @@ const Watch = () => {
   };
 
   useEffect(() => {
-    fetchAndJoin();
+    if (nameSubmitted) {
+      fetchJoinDetails();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [nameSubmitted]);
+
+  if (!nameSubmitted) {
+    return (
+      <div className="min-h-screen bg-base">
+        <Navbar />
+        <div className="max-w-sm mx-auto mt-24 px-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setNameSubmitted(true);
+            }}
+            className="bg-surface border border-line rounded-2xl p-8"
+          >
+            <h1 className="font-display text-xl font-bold text-white mb-1">
+              Join this live stream
+            </h1>
+            <p className="text-muted text-sm mb-5">
+              What name should we show you as?
+            </p>
+            <input
+              required
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Your name"
+              className="w-full bg-surface2 border border-line rounded-lg px-3 py-2.5 text-sm text-white mb-5 placeholder:text-muted/50"
+            />
+            <button
+              type="submit"
+              className="w-full bg-signal text-base font-semibold text-sm rounded-lg py-2.5 hover:brightness-110 transition"
+            >
+              Join now
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (meetingConfig) {
+    return <ZoomViewerEmbed meetingConfig={meetingConfig} displayName={displayName} />;
+  }
 
   return (
     <div className="min-h-screen bg-base">
       <Navbar />
-
       <div className="max-w-lg mx-auto px-4 py-24 text-center">
         <Link to="/" className="text-sm text-muted hover:text-white transition mb-8 inline-block">
           ← Back to all live streams
@@ -47,19 +89,6 @@ const Watch = () => {
             <p className="text-muted text-sm">
               This creator may have ended their stream. Head back to see who's live.
             </p>
-          </div>
-        ) : joined ? (
-          <div className="border border-line rounded-2xl py-16 text-center bg-surface">
-            <p className="text-white text-sm mb-2">Zoom opened in a new tab.</p>
-            <p className="text-muted text-sm mb-5">
-              If it didn't open, check your browser's popup blocker.
-            </p>
-            <button
-              onClick={fetchAndJoin}
-              className="bg-signal text-base font-semibold text-sm rounded-lg px-5 py-2.5 hover:brightness-110 transition"
-            >
-              Reopen Zoom
-            </button>
           </div>
         ) : null}
       </div>
