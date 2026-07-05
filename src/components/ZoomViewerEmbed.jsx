@@ -26,6 +26,7 @@ const ZoomViewerEmbed = ({ meetingConfig, displayName }) => {
 
       ZoomMtg.init({
         leaveUrl: window.location.href,
+        disableZoomLogo: true, // hides the "Zoom Workplace" logo/header
         patchJsMedia: true,
         success: () => {
           ZoomMtg.join({
