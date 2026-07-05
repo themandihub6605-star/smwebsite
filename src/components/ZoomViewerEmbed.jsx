@@ -12,6 +12,9 @@ const ZoomViewerEmbed = ({ meetingConfig, displayName }) => {
     const joinMeeting = async () => {
       const { default: ZoomMtgEmbedded } = await import("@zoom/meetingsdk/embedded");
 
+      await import("@zoom/meetingsdk/dist/css/bootstrap.css");
+      await import("@zoom/meetingsdk/dist/css/react-select.css");
+
       const client = ZoomMtgEmbedded.createClient();
       clientRef.current = client;
 
@@ -20,8 +23,14 @@ const ZoomViewerEmbed = ({ meetingConfig, displayName }) => {
       await client.init({
         zoomAppRoot: containerRef.current,
         language: "en-US",
+        patchJsMedia: true,
         customize: {
-          video: { isResizable: true, viewSizes: { default: { width: 1000, height: 600 } } },
+          video: {
+            isResizable: true,
+            viewSizes: {
+              default: { width: containerRef.current.offsetWidth, height: 600 },
+            },
+          },
         },
       });
 
@@ -48,8 +57,13 @@ const ZoomViewerEmbed = ({ meetingConfig, displayName }) => {
   }, [meetingConfig]);
 
   return (
-    <div className="w-full h-full min-h-[500px] rounded-2xl overflow-hidden bg-black">
-      <div ref={containerRef} id="zmmtg-root-container" className="w-full h-full" />
+    <div className="w-full rounded-2xl overflow-visible bg-black" style={{ minHeight: 600 }}>
+      <div
+        ref={containerRef}
+        id="zmmtg-root-container"
+        className="w-full"
+        style={{ position: "relative", minHeight: 600 }}
+      />
     </div>
   );
 };
